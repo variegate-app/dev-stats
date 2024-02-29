@@ -7,10 +7,10 @@ services:
     ports:
       - 3000:3000
     volumes:
-      # touch ../etc/grafana/grafana-config/grafana.ini;
-      # mkdir -p ../etc/grafana/{grafana-config,grafana-data};
-      - ../etc/grafana/grafana-config:/etc/grafana
-      - ../etc/grafana/grafana-data:/var/lib/grafana
+      # touch ./etc/grafana/grafana-config/grafana.ini;
+      # mkdir -p ./etc/grafana/{grafana-config,grafana-data};
+      - ./etc/grafana/grafana-config:/etc/grafana
+      - ./etc/grafana/grafana-data:/var/lib/grafana
     user: "root"
     environment:
       # Uncomment GF_SERVER_DOMAIN, GF_SERVER_ROOT_URL for using reserve proxy
@@ -58,11 +58,11 @@ services:
     ports:
       - 9090:9090
     volumes:
-      # touch ../etc/swarm/grafana/config/{prometheus.yaml,web-config.yaml};
-      # mkdir -p ../etc/grafana/prometheus-data
-      - ../etc/swarm/grafana/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
-      - ../etc/swarm/grafana/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
-      - ../etc/grafana/prometheus-data:/prometheus
+      # touch ./etc/swarm/grafana/config/{prometheus.yaml,web-config.yaml};
+      # mkdir -p ./etc/grafana/prometheus-data
+      - ./etc/swarm/grafana/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./etc/swarm/grafana/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
+      - ./etc/grafana/prometheus-data:/prometheus
     user: "root"
     # Uncomment for using docker secrets
     #secrets:
@@ -86,7 +86,7 @@ services:
     ports:
       - 9091:9091
     volumes:
-      - ../etc/swarm/grafana/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
+      - ./etc/swarm/grafana/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
     command:
       - "--web.config.file=/etc/prometheus/web-config.yaml"
     deploy:
@@ -102,10 +102,10 @@ services:
     image: "grafana/loki:2.9.0"
     #  - "3100:3100" port closed because loki does not support basic auth
     volumes:
-      # touch ../etc/swarm/grafana/config/loki.yaml;
-      # mkdir -p ../etc/grafana/loki-data;
-      - ../etc/swarm/grafana/config/loki.yaml:/etc/loki/loki.yaml:ro
-      - ../etc/grafana/loki-data:/loki
+      # touch ./etc/swarm/grafana/config/loki.yaml;
+      # mkdir -p ./etc/grafana/loki-data;
+      - ./etc/swarm/grafana/config/loki.yaml:/etc/loki/loki.yaml:ro
+      - ./etc/grafana/loki-data:/loki
     command: 
       - "--config.file=/etc/loki/loki.yaml"
     user: "root"
@@ -121,10 +121,10 @@ services:
   promtail:
     image: "grafana/promtail:2.9.0"
     volumes:
-      # touch ../etc/swarm/grafana/config/promtail.yaml;
-      # mkdir -p ../etc/grafana/promtail-data;
-      - ../etc/swarm/grafana/config/promtail.yaml:/etc/promtail/promtail.yaml:ro
-      - ../etc/grafana/promtail-data:/var/promtail
+      # touch ./etc/swarm/grafana/config/promtail.yaml;
+      # mkdir -p ./etc/grafana/promtail-data;
+      - ./etc/swarm/grafana/config/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - ./etc/grafana/promtail-data:/var/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/log:/var/log:ro
     environment:
