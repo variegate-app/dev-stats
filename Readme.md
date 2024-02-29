@@ -261,4 +261,4 @@ scrape_configs:
      "labels-regex": "^.+"
   }
 }
-```
+```# dev-stats
