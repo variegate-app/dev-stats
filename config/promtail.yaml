@@ -3,7 +3,7 @@ server:
   http_listen_port: 9080
 
 positions:
-  filename: "/var/promtail/positions_${HOST_HOSTNAME}.yaml" # remove "_${HOST_HOSTNAME}" if you do not use docker swarm
+  filename: "/var/promtail/positions.yaml" # remove "_${HOST_HOSTNAME}" if you do not use docker swarm
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
@@ -16,7 +16,6 @@ scrape_configs:
       - localhost
     labels:
       job: containers_logs
-      node_hostname: "${HOST_HOSTNAME}" # remove line if you do not use docker swarm
       __path__: /var/lib/docker/containers/*/*log
 
   pipeline_stages:
@@ -29,13 +28,6 @@ scrape_configs:
         # docker compose
         compose_project: attrs."com.docker.compose.project"
         compose_service: attrs."com.docker.compose.service"
-        # docker swarm
-        stack_name: attrs."com.docker.stack.namespace"
-        service_name: attrs."com.docker.swarm.service.name"
-        service_id: attrs."com.docker.swarm.service.id"
-        task_name: attrs."com.docker.swarm.task.name"
-        task_id: attrs."com.docker.swarm.task.id"
-        node_id: attrs."com.docker.swarm.node.id"
   - regex:
       expression: "^/var/lib/docker/containers/(?P<container_id>.{12}).+/.+-json.log$"
       source: filename
@@ -49,12 +41,5 @@ scrape_configs:
       # docker compose
       compose_project:
       compose_service:
-      # docker swarm
-      stack_name:
-      service_name:
-      service_id:
-      task_name:
-      task_id:
-      node_id:
   - output:
       source: log

@@ -1,5 +1,3 @@
-version: "3"
-
 services:
 
   grafana:
@@ -7,8 +5,8 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - /mnt/common_volume/grafana/grafana-config:/etc/grafana
-      - /mnt/common_volume/grafana/grafana-data:/var/lib/grafana
+      - /usr/local/dev-stats/grafana-config:/etc/grafana
+      - /usr/local/dev-stats/grafana-data:/var/lib/grafana
     user: "root"
     environment:
       # Uncomment GF_SERVER_DOMAIN, GF_SERVER_ROOT_URL for using reserve proxy
@@ -57,7 +55,7 @@ services:
     volumes:
       - /usr/local/dev-stats/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - /usr/local/dev-stats/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
-      - /mnt/common_volume/grafana/prometheus-data:/prometheus
+      - /usr/local/dev-stats/prometheus-data:/prometheus
     user: "root"
     secrets:
      - node_exporter_password
@@ -96,7 +94,7 @@ services:
     image: "grafana/loki:2.9.0"
     volumes:
       - /usr/local/dev-stats/config/loki.yaml:/etc/loki/loki.yaml:ro
-      - /mnt/common_volume/grafana/loki-data:/loki
+      - /usr/local/dev-stats/loki-data:/loki
     command: 
       - "--config.file=/etc/loki/loki.yaml"
     user: "root"
@@ -113,7 +111,7 @@ services:
     image: "grafana/promtail:2.9.0"
     volumes:
       - /usr/local/dev-stats/config/promtail.yaml:/etc/promtail/promtail.yaml:ro
-      - /mnt/common_volume/grafana/promtail-data:/var/promtail
+      - /usr/local/dev-stats/promtail-data:/var/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/log:/var/log:ro
     environment:
@@ -144,8 +142,8 @@ services:
           
 secrets:
  grafana_database_password:
-   file: ./.secrets
+   file: ./secret/grafana_database_pass
  node_exporter_password:
-   file: ./.secrets
+   file: ./secret/node_exporter_pass
  grafana_prometheus_password:
-   file: ./.secrets
+   file: ./secret/prometheus_pass

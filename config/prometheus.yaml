@@ -9,8 +9,7 @@ scrape_configs:
   - targets: ['192.168.100.2:9100', '192.168.100.4:9100', '192.168.100.6:9100'] # change 192.168.100.x to your nodes IPs
   basic_auth:
     username: 'admin' # change
-    password: 'admin' # change # or use password_file instead (docker secrets)
-    # password_file: '/run/secrets/node_exporter_password'
+    password: 'admin' # use password_file instead (docker secrets)
 
 # docker daemon (https://docs.docker.com/config/daemon/prometheus/)
 - job_name: 'docker'
@@ -24,8 +23,7 @@ scrape_configs:
   - targets: ['pushgateway:9091']
   basic_auth:
     username: 'admin' # change
-    password: 'admin' # change # or use password_file instead (docker secrets)
-    # password_file: '/run/secrets/node_exporter_password'
+    password: 'admin' # use password_file instead (docker secrets)
 
 # nginx exporter (https://github.com/nginxinc/nginx-prometheus-exporter)
 - job_name: 'nginx'

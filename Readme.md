@@ -1,36 +1,28 @@
 # Стек сервисов Grafana, Prometheus, Pushgateway, Loki и Promtail для Docker (swarm, compose)
 
-Логи собираются со всех контейнеров в кластере swarm без необходимости установки дополнительного ПО на ноды в кластере.
+Логи собираются со всех контейнеров без необходимости установки дополнительного ПО на ноды в кластере.
 Метрики собираются с exporter'ов, которые устанавливаются отдельно (при необходимости).
 Можно использовать также и на одной ноде (одной VM, одной машине) c docker compose.
 
 ## Быстрый старт
 
-* Для docker swarm (должен быть инициализирован swarm: `docker swarm init`)
-
-```
-git clone git@github.com:variegate-app/dev-stats.git && \
-cd dev-stats && \
-sudo mkdir -p /mnt/common_volume/swarm/grafana/config && \
-sudo mkdir -p /mnt/common_volume/grafana/{grafana-config,grafana-data,prometheus-data,loki-data,promtail-data} && \
-sudo chown -R $(id -u):$(id -g) {/mnt/common_volume/swarm/grafana/config,/mnt/common_volume/grafana} && \
-touch /mnt/common_volume/grafana/grafana-config/grafana.ini && \
-cp config/* /mnt/common_volume/swarm/grafana/config/ && \
-docker stack deploy -c grafana.yaml grafana
-```
-
 * Для docker compose
 
-```
-git clone git@github.com:variegate-app/dev-stats.git && \
+```bash
+DSUS=$(id -u) && \
+DSGR=$(id -g) && \
+DSPATH='/usr/local/dev-stats' && \
+sudo rm -rf $DSPATH && \
+sudo mkdir -p $DSPATH/{secret,config,grafana-config,grafana-data,prometheus-data,loki-data,promtail-data} && \
+sudo touch $DSPATH/grafana-config/grafana.ini && \
+sudo chown -R $DSUS:$DSGR $DSPATH && \
+sudo rm -rf ./dev-stats && \
+git clone git@github.com:variegate-app/dev-stats.git dev-stats && \
 cd dev-stats && \
-sudo mkdir -p /mnt/common_volume/swarm/grafana/config && \
-sudo mkdir -p /mnt/common_volume/grafana/{grafana-config,grafana-data,prometheus-data,loki-data,promtail-data} && \
-sudo chown -R $(id -u):$(id -g) {/mnt/common_volume/swarm/grafana/config,/mnt/common_volume/grafana} && \
-touch /mnt/common_volume/grafana/grafana-config/grafana.ini && \
-cp config/* /mnt/common_volume/swarm/grafana/config/ && \
-mv grafana.yaml docker-compose.yaml && \
-docker compose up -d
+touch ./secret/{grafana_database_pass,node_exporter_pass,prometheus_pass}
+cp ./config/* $DSPATH/config/ && \
+cp ./secret/* $DSPATH/secret/ && \
+docker-compose -f docker-compose.yaml up -d
 ```
 
 * Перейти в браузере по адресу http:// **IP адрес сервера, на котором запущен стек** :3000 (логин `admin` пароль `admin`)
@@ -38,14 +30,6 @@ docker compose up -d
 
 ## Особенности конфигурации из примера
 
-* Конфигурация для использования в docker swarm. Если необходимо использовать просто с docker compose: 
-  * удалить или скорректировать параметры `deploy:` в `grafana.yaml`, переименовать `mv grafana.yaml docker-compose.yaml`
-  * не использовать docker secrets, т.к. docker compose в настоящий момент не поддерживает secrets
-* В конфигурации используются bind volumes. Перед запуском необходимо: 
-  * В `grafana.yaml` скорректировать используемые в примере пути: `/mnt/common_volume/swarm/grafana/config` (файлы конфигураций) и `/mnt/common_volume/grafana` (файлы данных) на свои. 
-    * Для кластера (несколько нод): подразумевается, что `/mnt/common_volume` это общий том для нод в кластере. Если создать общий том для всех нод нет возможности, необходимо запускать все сервисы, кроме promtail, только на одной ноде, а для promtail создать bind volume на каждой ноде (это корректно, что для каждого экземпляра promtail будет свой volume).
-    * Для запуска всего стека на одной оде (одной VM, одной машине) можно использовать любой удобный volume.
-    * В любом случае необходимо **обязательно** создать пустые папки и файлы конфигурации (для последних - даже если они пустые, например `grafana.ini`). Команды для создания указаны в `grafana.yaml` в комментариях в секции `volume`.
 * В конфигурации `prometheus.yaml` указаны примеры сбора метрик с различных exporter'ов, для сбора метрик с них, последние необходимо установить и настроить (в противном случае, с отсутствующих не будут собираться метрики).
 
 ## Конфигурация отдельных сервисов
@@ -68,7 +52,7 @@ docker compose up -d
 * Установить timezone: например `TZ: "Europe/Moscow"`
 * В основном сервисе (grafana) установить подключение к grafana image renderer:
 
-```
+```yaml
 GF_RENDERING_SERVER_URL: "http://grafana-image-renderer:8081/render"
 GF_RENDERING_CALLBACK_URL: "http://grafana:3000/"
 GF_UNIFIED_ALERTING_SCREENSHOTS_CAPTURE: true
@@ -85,7 +69,7 @@ GF_LOG_FILTERS: "rendering:debug"
 
 Пример `prometheus.yaml` (вместо `password` безопасно использовать `password_file` совместно с docker secrets)
 
-```
+```yaml
 global:
   scrape_interval: 15s
 
@@ -97,8 +81,7 @@ scrape_configs:
   - targets: ['192.168.100.2:9100', '192.168.100.4:9100', '192.168.100.6:9100'] # change 192.168.100.x to your nodes IPs
   basic_auth:
     username: 'admin' # change
-    password: 'admin' # change # or use password_file instead (docker secrets)
-    # password_file: '/run/secrets/node_exporter_password'
+    password: 'admin' # use password_file instead (docker secrets)
 ```
 
 Пример `web-config.yaml` (используется для basic_auth)
@@ -109,10 +92,9 @@ scrape_configs:
   * Если htpasswd не установлен: для Debian, Ubuntu `sudo apt install apache2-utils`
   * для ОС использующих yum `sudo yum install -y httpd-tools`
 
-```
+```yaml
 basic_auth_users:
   admin: $2y$10$K7gXeAs0VbhjHMdlV1Hn0OlWcqIoK7P9s/dVKB3HoyYcLuscxSpXe # change "$2y$10..." to basic auth password_hash
-  bobi: $2y$10$1sYkKxi49lGpFdlu7aDkTeWkzvkqaeCTb4PDBR/pNxeETO8N3shZS # you can add more users
 ```
 
 * Время и максимальный объём хранимых логов можно настроить с помощь команд запуска `--storage.tsdb.retention.time=15d`, `--storage.tsdb.retention.size=0` (напр. `512MB`) 
@@ -126,7 +108,7 @@ basic_auth_users:
 
 В конфиг `prometheus.yaml` необходимо добавить в качестве target'а сервис pushgateway с `honor_labels: true`
 
-```
+```yaml
 # pushgateway
 - job_name: 'pushgateway'
   honor_labels: true
@@ -134,8 +116,7 @@ basic_auth_users:
   - targets: ['pushgateway:9091']
   basic_auth:
     username: 'admin' # change
-    password: 'admin' # change # or use password_file instead (docker secrets)
-    # password_file: '/run/secrets/node_exporter_password'
+    password: 'admin' # use password_file instead (docker secrets)
 ```
 
 ### Loki
@@ -150,14 +131,14 @@ basic_auth_users:
 
 В стандартный файл можно добавить запрет отправки analytics:
 
-```
+```yaml
 analytics:
   reporting_enabled: false
 ```
 
 Можно добавить настройку очистки старых логов (по умолчанию логи хранятся вечно): <https://grafana.com/docs/loki/latest/operations/storage/retention/>
 
-```
+```yaml
 limits_config:
   retention_period: 7d # days to delete old logs, you can change
   max_query_lookback: 7d # days to delete old logs, you can change
@@ -185,14 +166,13 @@ compactor:
 
 Пример `promtail.yaml` (за основу взят <https://gist.github.com/ruanbekker/c6fa9bc6882e6f324b4319c5e3622460?permalink_comment_id=4570985#gistcomment-4570985>)
 
-```
+```yaml
 server:
   http_listen_address: 0.0.0.0
   http_listen_port: 9080
 
 positions:
-  filename: "/var/promtail/positions_${HOST_HOSTNAME}.yaml" # remove "_${HOST_HOSTNAME}" if you do not use docker swarm
-
+  filename: "/var/promtail/positions.yaml"
 clients:
   - url: http://loki:3100/loki/api/v1/push
 
@@ -204,7 +184,6 @@ scrape_configs:
       - localhost
     labels:
       job: containers_logs
-      node_hostname: "${HOST_HOSTNAME}" # remove line if you do not use docker swarm
       __path__: /var/lib/docker/containers/*/*log
 
   pipeline_stages:
@@ -217,13 +196,6 @@ scrape_configs:
         # docker compose
         compose_project: attrs."com.docker.compose.project"
         compose_service: attrs."com.docker.compose.service"
-        # docker swarm
-        stack_name: attrs."com.docker.stack.namespace"
-        service_name: attrs."com.docker.swarm.service.name"
-        service_id: attrs."com.docker.swarm.service.id"
-        task_name: attrs."com.docker.swarm.task.name"
-        task_id: attrs."com.docker.swarm.task.id"
-        node_id: attrs."com.docker.swarm.node.id"
   - regex:
       expression: "^/var/lib/docker/containers/(?P<container_id>.{12}).+/.+-json.log$"
       source: filename
@@ -237,13 +209,6 @@ scrape_configs:
       # docker compose
       compose_project:
       compose_service:
-      # docker swarm
-      stack_name:
-      service_name:
-      service_id:
-      task_name:
-      task_id:
-      node_id:
   - output:
       source: log
 ```
@@ -253,7 +218,7 @@ scrape_configs:
   * После внесения изменений в `/etc/docker/daemon.json` необходимо перезапустить docker daemon (`sudo systemctl restart docker`) для ОС, использующих systemctl
   * Для изменения логирования необходимо также перезапустить контейнеры (для compose и обычных контейнеров), контейнеры swarm пересоздаются при перезапуске docker
 
-```
+```json
 {
    "metrics-addr":"0.0.0.0:9323",
    "log-driver": "json-file",
