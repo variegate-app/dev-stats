@@ -1,12 +1,40 @@
 services:
 
+  postgres:
+    image: postgres:14.8-alpine3.18
+    environment:
+      POSTGRES_DB: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - grafana-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+
   grafana:
     image: "grafana/grafana-oss:10.2.2"
     ports:
       - 3000:3000
     volumes:
-      - /usr/local/dev-stats/grafana-config:/etc/grafana
-      - /usr/local/dev-stats/grafana-data:/var/lib/grafana
+      - ${INSTALL_PATH}/grafana-config:/etc/grafana
+    depends_on:
+      postgres:
+        condition: service_healthy
+    links:
+        - postgres
     user: "root"
     environment:
       # Uncomment GF_SERVER_DOMAIN, GF_SERVER_ROOT_URL for using reserve proxy
@@ -17,13 +45,12 @@ services:
       GF_UNIFIED_ALERTING_SCREENSHOTS_CAPTURE: "true"
       GF_LOG_FILTERS: "rendering:debug"
       # Uncomment for using PostgreSQL (recommended) instead SQLite
-      #GF_DATABASE_TYPE: "postgres"
-      #GF_DATABASE_HOST: "postgres:5432" # change "postgres:5432" to your PostgreSQL database host and port
-      #GF_DATABASE_NAME: "postgres" # change "postgres" to your database name
-      #GF_DATABASE_USER: "postgres" # change "postgres" to your database user name
-      #GF_DATABASE_PASSWORD: "postgres" # change "postgres" to your database password # or use GF_DATABASE_PASSWORD
-      #GF_DATABASE_PASSWORD__FILE: "/run/secrets/grafana_database_password" # for docker secrets # or use GF_DATABASE_PASSWORD
-      #GF_DATABASE_SSL_MODE: "disable"
+      GF_DATABASE_TYPE: "postgres"
+      GF_DATABASE_HOST: "postgres:5432" # change "postgres:5432" to your PostgreSQL database host and port
+      GF_DATABASE_NAME: "postgres" # change "postgres" to your database name
+      GF_DATABASE_USER: "postgres" # change "postgres" to your database user name
+      GF_DATABASE_PASSWORD: "postgres" # change "postgres" to your database password # or use GF_DATABASE_PASSWORD
+      GF_DATABASE_SSL_MODE: "disable"
     secrets:
      - grafana_database_password
     deploy:
@@ -53,9 +80,9 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - /usr/local/dev-stats/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
-      - /usr/local/dev-stats/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
-      - /usr/local/dev-stats/prometheus-data:/prometheus
+      - ${INSTALL_PATH}/config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ${INSTALL_PATH}/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
+      - prometheus-data:/prometheus
     user: "root"
     secrets:
      - node_exporter_password
@@ -78,7 +105,7 @@ services:
     ports:
       - 9091:9091
     volumes:
-      - /usr/local/dev-stats/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
+      - ${INSTALL_PATH}/config/web-config.yaml:/etc/prometheus/web-config.yaml:ro
     command:
       - "--web.config.file=/etc/prometheus/web-config.yaml"
     deploy:
@@ -93,8 +120,8 @@ services:
   loki:
     image: "grafana/loki:2.9.0"
     volumes:
-      - /usr/local/dev-stats/config/loki.yaml:/etc/loki/loki.yaml:ro
-      - /usr/local/dev-stats/loki-data:/loki
+      - ${INSTALL_PATH}/config/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
     command: 
       - "--config.file=/etc/loki/loki.yaml"
     user: "root"
@@ -110,8 +137,8 @@ services:
   promtail:
     image: "grafana/promtail:2.9.0"
     volumes:
-      - /usr/local/dev-stats/config/promtail.yaml:/etc/promtail/promtail.yaml:ro
-      - /usr/local/dev-stats/promtail-data:/var/promtail
+      - ${INSTALL_PATH}/config/promtail.yaml:/etc/promtail/promtail.yaml:ro
+      - promtail-data:/var/promtail
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/log:/var/log:ro
     environment:
@@ -139,11 +166,18 @@ services:
       resources:
         limits:
           memory: 512M
-          
+
+# https://docs.docker.com/engine/reference/commandline/secret_create/
 secrets:
  grafana_database_password:
-   file: ./secret/grafana_database_pass
+   file: secret/grafana_database_pass
  node_exporter_password:
-   file: ./secret/node_exporter_pass
+   file: secret/node_exporter_pass
  grafana_prometheus_password:
-   file: ./secret/prometheus_pass
+   file: secret/prometheus_pass
+
+volumes:
+  grafana-data:
+  loki-data:
+  promtail-data:
+  prometheus-data:

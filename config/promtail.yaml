@@ -3,7 +3,7 @@ server:
   http_listen_port: 9080
 
 positions:
-  filename: "/var/promtail/positions.yaml" # remove "_${HOST_HOSTNAME}" if you do not use docker swarm
+  filename: "/var/promtail/positions.yaml"
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
@@ -25,7 +25,6 @@ scrape_configs:
         stream: stream
         time: time
         tag: attrs.tag
-        # docker compose
         compose_project: attrs."com.docker.compose.project"
         compose_service: attrs."com.docker.compose.service"
   - regex:
@@ -38,7 +37,6 @@ scrape_configs:
       stream:
       container_id:
       tag:
-      # docker compose
       compose_project:
       compose_service:
   - output:
