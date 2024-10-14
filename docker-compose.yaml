@@ -144,8 +144,8 @@ services:
           
 secrets:
  grafana_database_password:
-   external: true
+   file: ./.secrets
  node_exporter_password:
-   external: true
+   file: ./.secrets
  grafana_prometheus_password:
-   external: true
+   file: ./.secrets
