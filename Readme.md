@@ -1,4 +1,4 @@
-# Стек сервисов Grafana, Prometheus, Pushgateway, Loki и Promtail для Docker (swarm, compose)
+# Стек сервисов Grafana, Prometheus, Pushgateway, Loki и Promtail для Docker (compose)
 
 Логи собираются со всех контейнеров без необходимости установки дополнительного ПО на ноды в кластере.
 Метрики собираются с exporter'ов, которые устанавливаются отдельно (при необходимости).
@@ -9,20 +9,10 @@
 * Для docker compose
 
 ```bash
-DSUS=$(id -u) && \
-DSGR=$(id -g) && \
-DSPATH='/usr/local/dev-stats' && \
-sudo rm -rf $DSPATH && \
-sudo mkdir -p $DSPATH/{secret,config,grafana-config,grafana-data,prometheus-data,loki-data,promtail-data} && \
-sudo touch $DSPATH/grafana-config/grafana.ini && \
-sudo chown -R $DSUS:$DSGR $DSPATH && \
-sudo rm -rf ./dev-stats && \
 git clone git@github.com:variegate-app/dev-stats.git dev-stats && \
 cd dev-stats && \
-touch ./secret/{grafana_database_pass,node_exporter_pass,prometheus_pass}
-cp ./config/* $DSPATH/config/ && \
-cp ./secret/* $DSPATH/secret/ && \
-docker-compose -f docker-compose.yaml up -d
+make install && \
+make start
 ```
 
 * Перейти в браузере по адресу http:// **IP адрес сервера, на котором запущен стек** :3000 (логин `admin` пароль `admin`)
@@ -216,7 +206,7 @@ scrape_configs:
 * В `promtail.yaml` можно использовать environment variables (например `custom_label: "${ENV}"`) для этого нужно передать дополнительно команду `-config.expand-env=true`
 * **Для корректной работы labels** необходимо внести в `/etc/docker/daemon.json` (на каждом хосте) настройку `log-driver` и `log-opts`: 
   * После внесения изменений в `/etc/docker/daemon.json` необходимо перезапустить docker daemon (`sudo systemctl restart docker`) для ОС, использующих systemctl
-  * Для изменения логирования необходимо также перезапустить контейнеры (для compose и обычных контейнеров), контейнеры swarm пересоздаются при перезапуске docker
+  * Для изменения логирования необходимо также перезапустить контейнеры (для compose и обычных контейнеров)
 
 ```json
 {
